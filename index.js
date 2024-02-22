@@ -11,11 +11,33 @@ const io = socketIo(server);
 const user = require('./users.js');
 const message = require('./message.js');
 const groupmessage = require('./groupMessage.js');
+const { MongoClient,ServerApiVersion } = require('mongodb');
 
 const mongoose = require('mongoose');
-mongoose.connect('mongodb://127.0.0.1:27017/ChattingDB');
+const URL = "mongodb+srv://swapnilsharma:SWAPnil%401234@cluster0.c67cakc.mongodb.net/"
+const client = new MongoClient(URL, {
+	serverApi: {
+	  version: ServerApiVersion.v1,
+	  strict: true,
+	  deprecationErrors: true,
+	}
+	});
+// client.connect('mongodb://127.0.0.1:27017/ChattingDB');
 
-// const { MongoClient } = require('mongodb');
+async function run() {
+	try {
+	  // Connect the client to the server	(optional starting in v4.7)
+	  await client.connect();
+	  // Send a ping to confirm a successful connection
+	//   await client.db("admin").command({ ping: 1 });
+	  console.log("Pinged your deployment. You successfully connected to MongoDB!");
+	} finally {
+	  // Ensures that the client will close when you finish/error
+	  await client.close();
+	}
+  }
+  run().catch(console.dir);
+
 // const client = new MongoClient('mongodb://127.0.0.1:27017')
 // const passport = require('passport');
 // const passportJWT = require('passport-jwt');
@@ -339,9 +361,9 @@ io.on('connection', (socket) => {
 	});
 });
 
-mongoose.connection.on("connected" , () => {
-    console.log("Mongo has connected Succesfully");
-})
+// client.connection.on("connected" , () => {
+//     console.log("Mongo has connected Succesfully");
+// })
 
 function secretKey(length) {
     let result = '';

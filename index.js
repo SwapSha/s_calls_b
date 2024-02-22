@@ -46,6 +46,14 @@ app.post("/login" , (req,res) => {
 	})
 });
 
+app.post("/join" , (res,req)=>{
+	let hashPassword = md(res.body.passWord);
+		UserDetail = {firstName:res.body.firstName , lastName:res.body.lastName , userName:res.body.userName , passWord: hashPassword , profile : `${res.body.profilePicture}`}
+		user.create(UserDetail).then((response)=>{
+			console.log(response);
+		}).catch((err)=> console.log(err));
+})
+
 let profilestorage = multer.diskStorage({
 	destination: (req,res,cb)=>{
 		cb(null , 'D:/ChattingApp/backend/profile')

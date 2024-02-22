@@ -4,39 +4,17 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 const multer = require('multer');
 const bodyparser = require('body-parser');
-// const fs = require('fs');
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 const user = require('./users.js');
 const message = require('./message.js');
 const groupmessage = require('./groupMessage.js');
-const { MongoClient,ServerApiVersion } = require('mongodb');
 
 const mongoose = require('mongoose');
-const URL = "mongodb+srv://swapnilsharma:SWAPnil%401234@cluster0.c67cakc.mongodb.net/"
-const client = new MongoClient(URL, {
-	serverApi: {
-	  version: ServerApiVersion.v1,
-	  strict: true,
-	  deprecationErrors: true,
-	}
-	});
-// client.connect('mongodb://127.0.0.1:27017/ChattingDB');
+const URL = "mongodb+srv://swapnilsharma:SWAPnil%401234@cluster0.c67cakc.mongodb.net/ChattingDB"
 
-async function run() {
-	try {
-	  // Connect the client to the server	(optional starting in v4.7)
-	  await client.connect();
-	  // Send a ping to confirm a successful connection
-	//   await client.db("admin").command({ ping: 1 });
-	  console.log("Pinged your deployment. You successfully connected to MongoDB!");
-	} finally {
-	  // Ensures that the client will close when you finish/error
-	  await client.close();
-	}
-  }
-  run().catch(console.dir);
+mongoose.connect(URL);
 
 // const client = new MongoClient('mongodb://127.0.0.1:27017')
 // const passport = require('passport');
@@ -194,7 +172,7 @@ let dragDropstorage = multer.diskStorage({
 	}
 });
 
-let uploaddragDrop = multer({ storage:dragDropstorage , limits: { fileSize: 25 * 1024 * 1024 }}); // https://stackoverflow.com/questions/39350040/uploading-multiple-files-with-multer
+let uploaddragDrop = multer({ storage:dragDropstorage , limits: { fileSize: 25 * 1024 * 1024 }}); 
 
 app.post('/dragDrop' , uploaddragDrop.array('fileUpload',10) , (req,res)=>{
 	if(req.file){
@@ -223,10 +201,10 @@ io.on('connection', (socket) => {
 		io.emit("get-users", onlineUsers);
 	  });
 
-	socket.on("newUser", (data)=> {
+	socket.on("newUser", async (data)=> {
 		let hashPassword = md(data.passWord);
 		UserDetail = {firstName:data.firstName , lastName:data.lastName , userName:data.userName , passWord: hashPassword , profile : `${data.profilePicture}`}
-		user.create(UserDetail).then((response)=>{
+		await user.create(UserDetail).then((response)=>{
 			console.log(response);
 		}).catch((err)=> console.log(err));
 	});
@@ -361,9 +339,9 @@ io.on('connection', (socket) => {
 	});
 });
 
-// client.connection.on("connected" , () => {
-//     console.log("Mongo has connected Succesfully");
-// })
+mongoose.connection.on("connected" , () => {
+    console.log("Mongo has connected Succesfully");
+})
 
 function secretKey(length) {
     let result = '';
@@ -380,5 +358,3 @@ function secretKey(length) {
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
-
-// https://github.com/roytuts/angular/blob/master/angular-image-upload-display/src/app/app.component.ts

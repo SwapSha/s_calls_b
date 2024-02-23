@@ -143,7 +143,7 @@ let uploadgroup = multer({ storage:groupstorage});
 
 app.post('/groupimage' , uploadgroup.single('groupimage') , (req,res)=>{
 	if(req.file){
-		console.log(req.file);
+		// console.log(req.file);
 	}
 	res.json({ message: 'File uploaded successfully!' });
 })
@@ -154,15 +154,15 @@ app.get('/getprofileimage/:imagename',(req,res)=>{
 });
 
 app.get('/getpersonalbackgroundimage/:imagename',(req,res)=>{
-	console.log(req.params);
+	// console.log(req.params);
 	res.sendFile("D:/ChattingApp/backend/personalBackground/"+req.params.imagename);
 })
 app.get('/getgroupbackgroundimage/:imagename',(req,res)=>{
-	console.log(req.params);
+	// console.log(req.params);
 	res.sendFile("D:/ChattingApp/backend/groupBackground/"+req.params.imagename);
 })
 app.get('/getgroupbackgroundimage/:imagename',(req,res)=>{
-	console.log(req.params);
+	// console.log(req.params);
 	res.sendFile("D:/ChattingApp/backend/background/"+req.params.imagename);
 })
 
@@ -184,8 +184,8 @@ let uploaddragDrop = multer({ storage:dragDropstorage , limits: { fileSize: 25 *
 
 app.post('/dragDrop' , uploaddragDrop.array('fileUpload',10) , (req,res)=>{
 	if(req.file){
-		console.log(req.file);
-		console.log("Params :",req.params);
+		// console.log(req.file);
+		// console.log("Params :",req.params);
 		
 		// groupmessage.findByIdAndUpdate({_id : req.params.Gid} , 
 		// 	{ $set : {
@@ -196,7 +196,7 @@ app.post('/dragDrop' , uploaddragDrop.array('fileUpload',10) , (req,res)=>{
 		res.json({ message: 'Drag & Drop File uploaded successfully!' });
 	}
 })
-
+ activeUser = [];
  onlineUsers = [];
 io.on('connection', (socket) => {
 	let activeroomID = socket.activeRoom;
@@ -210,11 +210,11 @@ io.on('connection', (socket) => {
 	  });
 
 	socket.on("newUser", async (data)=> {
-		let hashPassword = md(data.passWord);
-		UserDetail = {firstName:data.firstName , lastName:data.lastName , userName:data.userName , passWord: hashPassword , profile : `${data.profilePicture}`}
-		await user.create(UserDetail).then((response)=>{
-			console.log(response);
-		}).catch((err)=> console.log(err));
+		// let hashPassword = md(data.passWord);
+		// UserDetail = {firstName:data.firstName , lastName:data.lastName , userName:data.userName , passWord: hashPassword , profile : `${data.profilePicture}`}
+		// await user.create(UserDetail).then((response)=>{
+		// 	console.log(response);
+		// }).catch((err)=> console.log(err));
 	});
 
 	socket.on("oldMessages" , async (data)=>{
@@ -328,21 +328,28 @@ io.on('connection', (socket) => {
 		});
 
 	});
-
+	
 	socket.on('video-chat' ,( roomID , userId )=>{
-		// console.log("ROOMID : ",roomID," && USERID : ",userId);
-		socket.join(roomID);
-		socket.broadcast.emit('video-connected', userId);
-
-		socket.on('disconnect' , ()=>{
-			socket.broadcast.emit('video-disconnected', userId)
-		});
+		let haveChats = message.findById({"_id":roomID}).then((res)=>{
+			if(res != null){
+				socket.join(roomID);
+				activeUser.push(userId);
+				io.sockets.in(roomID).emit('video-connected', activeUser)
+				// socket.to(roomID).emit('video-connected', userId);
+				// socket.broadcast.emit('video-connected', userId);
+				socket.on('disconnect' , ()=>{
+					socket.broadcast.emit('video-disconnected', userId)
+				});
+			}
+		})
 	})
 
 	socket.on('disconnect', () => {
 	  socket.leave(activeroomID);
 	  onlineUsers = onlineUsers.filter((user) => user.socketId !== socket.id)
 	  io.emit("get-users", onlineUsers);
+	  activeUser = [];
+	//   activeUser = activeUser.filter((user)=> user.socketId !== socket.id);
 	  console.log('User disconnected');
 	});
 });

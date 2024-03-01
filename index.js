@@ -3,15 +3,17 @@ const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
 const multer = require('multer');
+const md = require('md5');
 const bodyparser = require('body-parser');
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
+const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const user = require('./modal/users.js');
 const message = require('./modal/message.js');
 const groupmessage = require('./modal/groupMessage.js');
 
-const mongoose = require('mongoose');
 const URL = "mongodb+srv://swapnilsharma:SWAPnil%401234@cluster0.c67cakc.mongodb.net/ChattingDB"
 
 mongoose.connect(URL);
@@ -22,10 +24,8 @@ mongoose.connect(URL);
 // const jwtStrategy = passportJWT.Strategy;
 // const extractJwt = passportJWT.ExtractJwt;
 
-const jwt = require('jsonwebtoken');
 const PORT = process.env.PORT || 3000;
 const jwtSecretKey = secretKey(6);
-const md = require('md5');
 
 app.use(cors());
 app.use(bodyparser.json());
@@ -50,7 +50,6 @@ app.post("/join", (res, req) => {
 	let hashPassword = md(res.body.passWord);
 	UserDetail = { firstName: res.body.firstName, lastName: res.body.lastName, userName: res.body.userName, passWord: hashPassword, profile: `${res.body.profilePicture}` }
 	user.create(UserDetail).then((response) => {
-		console.log(response);
 	}).catch((err) => console.log(err));
 })
 
@@ -131,7 +130,6 @@ app.post('/groupbackimage/:Gid', uploadgroupback.single('groupBackimage'), (req,
 })
 
 /////////////////
-// ////////////////////
 
 let groupstorage = multer.diskStorage({
 	destination: (req, res, cb) => {
@@ -147,7 +145,6 @@ let uploadgroup = multer({ storage: groupstorage });
 
 app.post('/groupimage', uploadgroup.single('groupimage'), (req, res) => {
 	if (req.file) {
-		// console.log(req.file);
 	}
 	res.json({ message: 'File uploaded successfully!' });
 })
@@ -199,12 +196,12 @@ app.post('/dragDrop', uploaddragDrop.array('fileUpload', 10), (req, res) => {
 		// 	})
 		res.json({ message: 'Drag & Drop File uploaded successfully!' });
 	}
-})
+});
 activeUser = [];
 onlineUsers = [];
 io.on('connection', (socket) => {
 	let activeroomID = socket.activeRoom;
-	console.log('User connected ', socket.id);
+	// console.log('User connected ', socket.id);
 
 	socket.on("new-user-add", (newUserId) => {
 		if (!onlineUsers.some((user) => user.userId === newUserId)) {
@@ -340,9 +337,6 @@ io.on('connection', (socket) => {
 					// socket.emit('video-connected' , activeUser);
 					io.sockets.in(roomID).emit('video-connected', activeUser);
 					socket.emit("AutoCallUser" , "Activate call");
-					socket.on('video-disconnected', (userId)=>{
-							activeUser = activeUser.filter((user)=> user !== userId);
-					});
 				}
 			});
 		}
@@ -362,6 +356,11 @@ io.on('connection', (socket) => {
 				}
 			})
 		}
+	});
+
+	socket.on('video-disconnected', (userId)=>{
+		activeUser = activeUser.filter((user)=> user !== userId);
+		io.sockets.emit("Remain-User" , activeUser);
 	});
 
 	socket.on('videoCall', (groupID , typeofcall) => {
@@ -388,16 +387,18 @@ io.on('connection', (socket) => {
 			})
 		}
 	});
+
 	socket.on('disconnect', () => {
 		socket.leave(activeroomID);
 		onlineUsers = onlineUsers.filter((user) => user.socketId !== socket.id)
 		io.emit("get-users", onlineUsers);
-		console.log('User disconnected');
+		activeUser = [];
+		// console.log('User disconnected');
 	});
 });
 
 mongoose.connection.on("connected", () => {
-	console.log("Mongo has connected Succesfully");
+	// console.log("Mongo has connected Succesfully");
 })
 
 function secretKey(length) {

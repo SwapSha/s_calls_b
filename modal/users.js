@@ -15,6 +15,16 @@ const userSchema = new mongoose.Schema({
 	collection:"Users"
 });
 
+userSchema.statics.getUserById = async function (UName) {
+    try{
+        const user = await this.findOne({ userName : UName});
+        if(!user) throw ({ error:"No User with this User Name found !!" });
+        return user;
+    }catch(error){
+        throw error;
+    }
+}
+
 const User = mongoose.model('user', userSchema);
 
 module.exports = User;

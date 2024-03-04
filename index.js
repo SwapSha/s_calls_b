@@ -201,7 +201,6 @@ activeUser = [];
 onlineUsers = [];
 io.on('connection', (socket) => {
 	let activeroomID = socket.activeRoom;
-	// console.log('User connected ', socket.id);
 
 	socket.on("new-user-add", (newUserId) => {
 		if (!onlineUsers.some((user) => user.userId === newUserId)) {
@@ -225,7 +224,6 @@ io.on('connection', (socket) => {
 			}
 			socket.join(res._id);
 			socket.activeRoom = res._id;
-			// console.log("Group Active Room : ",socket.activeRoom);
 			socket.emit("oldMessages", res);
 		})
 	});
@@ -241,8 +239,8 @@ io.on('connection', (socket) => {
 			sendTo: data.sendTo,
 			sendFrom: data.sendFrom,
 			messages: {
-				userName: data.messages.userName,
-				message: data.messages.message
+				userName: data?.messages?.userName,
+				message: data?.messages?.message
 			}
 		}
 		let filterUserMsg;
@@ -250,13 +248,12 @@ io.on('connection', (socket) => {
 			return res
 		})
 		if (filterUserMsg) {
-			// console.log("Send To and Send From ARE Exist in DB !!!");
 			await message.updateOne({ "_id": filterUserMsg._id }, {
 				$push: {
 					"messages": [
 						{
-							"userName": msg.messages.userName,
-							"message": msg.messages.message
+							"userName": msg.messages?.userName,
+							"message": msg.messages?.message
 						}
 					]
 				}
@@ -264,16 +261,17 @@ io.on('connection', (socket) => {
 				// console.log("Message pushed perfectly");
 			})
 		} else {
-			message.create(msg).then(() => {
-				// console.log("New Message group inserted");
-			});
+			message.create(msg).then(() => { });
 		}
-
 		this.latestChat = await message.findOne({ $or: [{ sendFrom: msg.sendFrom, sendTo: msg.sendTo }, { sendFrom: msg.sendTo, sendTo: msg.sendFrom }] }).then((res) => {
+			if (res == null) {
+				res = []
+			}
 			return res
-		})
-		// io.emit('message', latestChat); // Broadcast the message to all connected clients
-		io.to(socket.activeRoom).emit('message', this.latestChat); // Broadcast the message to all connected clients
+		});
+		// io.emit('message', latestChat);
+		// Broadcast the message to all connected clients
+		io.to(socket.activeRoom).emit('message', this.latestChat);
 	});
 
 	socket.on('createGroup', async (data) => {
@@ -336,7 +334,7 @@ io.on('connection', (socket) => {
 					activeUser.push(userId);
 					// socket.emit('video-connected' , activeUser);
 					io.sockets.in(roomID).emit('video-connected', activeUser);
-					socket.emit("AutoCallUser" , "Activate call");
+					socket.emit("AutoCallUser", "Activate call");
 				}
 			});
 		}
@@ -345,12 +343,12 @@ io.on('connection', (socket) => {
 				if (res != null) {
 					socket.join(roomID);
 					activeUser.push(userId);
-					io.sockets.in(roomID).emit('video-connected', activeUser)					
-					socket.emit("AutoCallUser" , userId);
+					io.sockets.in(roomID).emit('video-connected', activeUser)
+					socket.emit("AutoCallUser", userId);
 					// socket.to(roomID).emit('video-connected', userId);
 					// socket.broadcast.emit('video-connected', userId);
 					socket.on('disconnect', () => {
-						activeUser = activeUser.filter((user)=> user !== userId);
+						activeUser = activeUser.filter((user) => user !== userId);
 						io.sockets.in(roomID).emit('video-disconnected', userId)
 					});
 				}
@@ -358,13 +356,13 @@ io.on('connection', (socket) => {
 		}
 	});
 
-	socket.on('video-disconnected', (userId)=>{
-		activeUser = activeUser.filter((user)=> user !== userId);
-		io.sockets.emit("Remain-User" , activeUser);
+	socket.on('video-disconnected', (userId) => {
+		activeUser = activeUser.filter((user) => user !== userId);
+		io.sockets.emit("Remain-User", activeUser);
 	});
 
-	socket.on('videoCall', (groupID , typeofcall) => {
-		if(typeofcall == "Group"){
+	socket.on('videoCall', (groupID, typeofcall) => {
+		if (typeofcall == "Group") {
 			groupmessage.findById({ "_id": groupID }).then((res) => {
 				res?.membersIn.map((user) => {
 					onlineUsers.map((item) => {
@@ -375,12 +373,12 @@ io.on('connection', (socket) => {
 				});
 			});
 		}
-		if(typeofcall == 'Single'){
-			message.findById({"_id" : groupID}).then((response)=>{
-				onlineUsers.map((item)=>{
-					if(item.userId == response?.sendFrom){
+		if (typeofcall == 'Single') {
+			message.findById({ "_id": groupID }).then((response) => {
+				onlineUsers.map((item) => {
+					if (item.userId == response?.sendFrom) {
 						socket.broadcast.to(item.socketId).emit('incomingCall', response);
-					}else{
+					} else {
 						socket.broadcast.to(item.socketId).emit('incomingCall', response);
 					}
 				})
@@ -393,12 +391,10 @@ io.on('connection', (socket) => {
 		onlineUsers = onlineUsers.filter((user) => user.socketId !== socket.id)
 		io.emit("get-users", onlineUsers);
 		activeUser = [];
-		// console.log('User disconnected');
 	});
 });
 
 mongoose.connection.on("connected", () => {
-	// console.log("Mongo has connected Succesfully");
 })
 
 function secretKey(length) {
